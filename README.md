@@ -107,14 +107,14 @@ MCU as stated below. Unchecked items have no dedicated remote implementation.
 - [x] **5+2, 6+1 and daily weekly programs** — program selector, dependent schedule fields and automatic DP38 saving.
 - [x] **Local date/time** — NTP plus configurable timezone rules; local time transmitted to MCU.
 - [x] **Local panel and autonomous regulation** — retained in the original MCU; the ESP does not run the heating control loop.
-- [ ] **Separate live readings for both sensors** — only the MCU-reported selected temperature is exposed.
-- [ ] **Floor over-temperature limit configuration** — no dedicated remote control; configure through the original panel where supported.
 - [x] **Switching differential/hysteresis configuration** — DP101, 1–5°C in Settings and MQTT/HA.
 - [x] **Anti-frost configuration** — DP10 switch in Settings and MQTT/HA; protection is executed by the MCU, including while off.
 - [x] **Upper/lower setpoint limit configuration** — DP19 (30–90°C) and DP26 (5–20°C), Settings and MQTT/HA.
 - [x] **Generic MCU fault reporting** — DP45 shown as `OK` or a hexadecimal fault bitmap in the portal and HA.
-- [ ] **Decoded MCU sensor faults** — individual fault bits are not mapped to sensor names without confirmed MCU evidence.
 - [x] **Conditional thermostat factory reset** — the confirmed ArdPortal Factory Reset invokes `onBeforeFactoryReset` and sends DP39 once, only if the MCU has reported DP39 as Boolean and no commands are pending. Offline/unsupported/busy MCU is logged and does not block ESP reset; physical MCU execution remains unconfirmed.
+- [ ] **Separate live readings for both sensors** — only the MCU-reported selected temperature is exposed.
+- [ ] **Floor over-temperature limit configuration** — no dedicated remote control; configure through the original panel where supported.
+- [ ] **Decoded MCU sensor faults** — individual fault bits are not mapped to sensor names without confirmed MCU evidence.
 - [ ] **Tuya / Smart Life cloud and vendor-app integration** — replaced by the local ArdPortal/MQTT/Home Assistant interface.
 
 Advanced settings use the [reported ME81H cloud schema](https://github.com/rospogrigio/localtuya/issues/1688), with writes gated by the actual MCU datapoint type. Ranges and write behavior still need validation on your physical MCU. No unsupported writes are replayed from offline preview.
