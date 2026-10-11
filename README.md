@@ -131,8 +131,13 @@ are ESP-side features. Energy is not measured or calculated by the factory MCU.
 
 ## Screenshots
 
-Actual portal screenshots captured during ESP-12F bench testing without the Tuya
-MCU. Missing MCU measurements appear as `unknown` in that setup.
+Actual portal screenshots. Settings was captured from the running thermostat
+with MCU readings. Schedule and Clock were captured during ESP-12F bench testing
+without the Tuya MCU; missing MCU measurements appear as `unknown` in that setup.
+
+### Settings
+
+![Settings with Climate, advanced MCU settings, fault status and estimated power/energy](docs/images/settings.jpg)
 
 ### Schedule
 
