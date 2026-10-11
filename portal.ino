@@ -71,6 +71,10 @@ void applyPortalControl(const String& fieldKey, const ArdJSON::JSONVar& value, A
   } else if (key=="sensor") handleBridgeCommand("TEMPSELECTOR",value.asString());
   else if (key=="calibration") handleBridgeCommand("TEMPERATURE_OFFSET",String(value.asDouble(),0));
   else if (key=="panel_lock") handleBridgeCommand("LOCK",value.asBool() ? "ON" : "OFF");
+  else if (key=="frost") handleBridgeCommand("FROST",value.asBool()?"ON":"OFF");
+  else if (key=="differential") handleBridgeCommand("DIFFERENTIAL",String(value.asDouble(),0));
+  else if (key=="lower_limit") handleBridgeCommand("LOWER_LIMIT",String(value.asDouble(),0));
+  else if (key=="upper_limit") handleBridgeCommand("UPPER_LIMIT",String(value.asDouble(),0));
   else if (key=="rated_power") handleBridgeCommand("POWER_CONSUMPTION",String(value.asDouble(),0));
   else if (key=="program") handleBridgeCommand("PROGRAM_MODE",value.asString());
   else if (key.startsWith("point_")) handleBridgeCommand("SCHEDULE_POINT_"+key.substring(6),pointValue);
@@ -83,7 +87,7 @@ void publishPriorityState() {
     const char* key=PORTAL_STATE_FIELDS[i];
     ArdJSON::JSONVar value=portal.getAppConfigValue(key);
     String payload=value.type()==ArdJSON::JSONVar::Type::String ? value.asString() : ArdJSON::JSON.stringify(value);
-    if(String(key)=="panel_lock") payload=value.asBool()?"ON":"OFF";
+    if(String(key)=="panel_lock" || String(key)=="frost") payload=value.asBool()?"ON":"OFF";
     String topic="stat/"+String(mqtt_hostname)+"/"+key;
     if(portal.publish(topic.c_str(),payload.c_str(),true)) priorityStateMask.reset(i);
     return;
@@ -162,6 +166,10 @@ void setupPortal() {
     // ArdPortal flushes callback writes and waits for completion before restart.
   });
   portal.onAppConfigValueChanged(applyPortalControl);
+  portal.onBeforeFactoryReset([]() {
+    // MCU reset is best effort; unsupported/offline MCU must not block ESP reset.
+    if(!requestMcuFactoryReset()) diagnostic("ESP factory reset continues; MCU reset not sent");
+  });
   portal.onPortalConfigChanged([](const ArdPortal::PortalConfig& config,ArdPortal::ChangeSource) { syncPortalIdentity(config); });
   portal.onPortalAndAppConfigSaved([](bool ok,const String& error) {
     if (energySavePending) {
@@ -178,7 +186,7 @@ void setupPortal() {
       int watts=portal.getAppConfigValue("bridge_settings")["rated_power"].asDouble();
       if (watts>=100 && watts<=5000) powerConsumption=watts;
       float target=portal.getAppConfigValue("bridge_settings")["normal_target"].asDouble();
-      if (isfinite(target) && target>=5 && target<=40) thermostatControl.restore(target);
+      if (isfinite(target) && target>=5 && target<=HEAT_TARGET_MAX) thermostatControl.restore(target);
     }
     syncPortalIdentity(portal.getPortalConfig());
     bridgeConfigPending=true;
@@ -263,6 +271,7 @@ void updatePortalState() {
     setReportedPortalValue("climate",climate);
 
 
+    setReportedPortalValue("mcu_fault","unknown");
     setReportedPortalValue("power","unknown");
     setReportedPortalValue("energy",String(energy,2));
 
@@ -290,6 +299,12 @@ void updatePortalState() {
   if (online && tempSelector>=0) setReportedPortalValue("sensor",optimisticState.value(DP_SENSOR,tempSelector)==0 ? "air" : optimisticState.value(DP_SENSOR,tempSelector)==1 ? "floor" : "both");
   if (online && hasDp(DP_CALIBRATION,2)) setReportedPortalValue("calibration",optimisticState.value(DP_CALIBRATION,dpValue[DP_CALIBRATION]));
   if (online && hasDp(DP_LOCK,1)) setReportedPortalValue("panel_lock",optimisticState.value(DP_LOCK,dpValue[DP_LOCK])!=0);
+  if(hasDp(DP_FROST,1)) setReportedPortalValue("frost",optimisticState.value(DP_FROST,dpValue[DP_FROST])!=0);
+  if(hasDp(DP_DIFFERENTIAL,2)) setReportedPortalValue("differential",optimisticState.value(DP_DIFFERENTIAL,dpValue[DP_DIFFERENTIAL]));
+  if(hasDp(DP_LOWER_LIMIT,2)) setReportedPortalValue("lower_limit",optimisticState.value(DP_LOWER_LIMIT,dpValue[DP_LOWER_LIMIT]));
+  if(hasDp(DP_UPPER_LIMIT,2)) setReportedPortalValue("upper_limit",optimisticState.value(DP_UPPER_LIMIT,dpValue[DP_UPPER_LIMIT]));
+  // Fault bit meanings are not verified; never label guessed bits as sensor faults.
+  setReportedPortalValue("mcu_fault",hasDp(DP_FAULT,5) ? (dpValue[DP_FAULT]==0 ? String("OK") : String("Fault bitmap: ")+String(uint32_t(dpValue[DP_FAULT]),HEX)) : String("unknown"));
   setReportedPortalValue("rated_power",powerConsumption);
   int watts=estimatedLoadPower(online,hasDp(DP_POWER,1),dpValue[DP_POWER]!=0,
     relayKnown,relayDirection,powerConsumption,retainConfirmedZeroPower);

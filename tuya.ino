@@ -31,6 +31,14 @@ void commandError(String error) {
 bool mcuOnline() { return mcuSeen && uint32_t(millis() - lastMcuRx) < 45000; }
 bool hasDp(uint8_t id, uint8_t type) { return id && dpSeen[id] && dpType[id] == type; }
 
+float targetLowerLimit() {
+  int limit=hasDp(DP_LOWER_LIMIT,2) ? optimisticState.value(DP_LOWER_LIMIT,dpValue[DP_LOWER_LIMIT]) : 5;
+  return limit>=5 && limit<=20 ? limit : 5;
+}
+float targetUpperLimit() {
+  int limit=hasDp(DP_UPPER_LIMIT,2) ? optimisticState.value(DP_UPPER_LIMIT,dpValue[DP_UPPER_LIMIT]) : 40;
+  return limit>=30 && limit<=90 ? limit : 40;
+}
 void tuyaSend(uint8_t cmd, const uint8_t *payload = nullptr, size_t length = 0) {
   uint8_t header[] = {0x55, 0xAA, 0, cmd, uint8_t(length >> 8), uint8_t(length)};
   uint8_t sum = 0;
@@ -265,7 +273,7 @@ String tuyaDiagnostics() {
   result += "Schedule DP38: " + String(scheduleKnown ? scheduleText : "unknown") + "\n";
   result += "Program mode DP102 (0=disabled,1=5+2,2=6+1,3=7): " + String(hasDp(DP_PROGRAM_MODE,4) ? dpValue[DP_PROGRAM_MODE] : -1) + "\n";
   result += "User target: " + String(thermostatControl.normalTarget()) + "\n";
-  result += "Target upper limit: " + String(HEAT_TARGET_MAX) + "\n";
+  result += "Target upper limit: " + String(targetUpperLimit()) + "\n";
   result += "Effective MCU target: " + String(hasDp(DP_TARGET,2) ? dpValue[DP_TARGET] * TARGET_SCALE : NAN) + "\n";
   result += "Pending mode: " + String(thermostatControl.pendingMode()) + "\n";
   result += "MCU calibration (assumed degrees C): " + (hasDp(DP_CALIBRATION,2) ? String(dpValue[DP_CALIBRATION]) : String("unknown")) + "\n";
@@ -276,6 +284,17 @@ String tuyaDiagnostics() {
 bool canWriteDp(uint8_t id, uint8_t type) {
   if (!mcuOnline() || initStage != 5) { commandError("MCU not ready"); return false; }
   if (!hasDp(id,type)) { commandError("Unsupported/unconfirmed datapoint " + String(id)); return false; }
+  return true;
+}
+bool requestMcuFactoryReset() {
+  // An explicit action only: never persist, retry or replay a destructive reset.
+  if(!canWriteDp(DP_FACTORY_RESET,1)) return false;
+  if(writeCount || writePending || offRequested) { commandError("Wait for pending MCU commands before reset"); return false; }
+  const uint8_t payload[]={DP_FACTORY_RESET,1,0,1,1};
+  tuyaSend(6,payload,sizeof(payload));
+  Serial.flush(); // Finish the short UART frame before the ESP can restart.
+  diagnostic("MCU factory reset sent; execution unconfirmed");
+  invalidateMcuState(); initStage=0; initSent=millis();
   return true;
 }
 bool queueDp(uint8_t id, uint8_t type, int32_t value) {
@@ -314,6 +333,11 @@ bool requestThermostatMode(int requested) {
   if (!canWriteDp(DP_POWER,1)) return false;
   if (requested != MODE_OFF && !canWriteDp(DP_OPERATION_MODE,4)) return false;
   if (requested == MODE_HEAT && !canWriteDp(DP_TARGET,2)) return false;
+  if(requested==MODE_HEAT) {
+    float target=thermostatControl.normalTarget();
+    float bounded=fmaxf(targetLowerLimit(),fminf(targetUpperLimit(),target));
+    thermostatControl.setNormalTarget(bounded);
+  }
   bool enableSchedule=requested==MODE_AUTO && hasDp(DP_PROGRAM_MODE,4) && dpValue[DP_PROGRAM_MODE]==0;
   if(enableSchedule && !canWriteDp(DP_PROGRAM_MODE,4)) {
     commandError("Cannot enable MCU weekly schedule"); return false;

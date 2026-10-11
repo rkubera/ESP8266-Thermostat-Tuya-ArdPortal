@@ -25,6 +25,13 @@ constexpr uint8_t DP_RELAY_REPORT = 36;
 constexpr uint8_t RELAY_REPORT_TYPE = 4;
 constexpr int32_t RELAY_ON_VALUE = 0;
 constexpr int32_t RELAY_OFF_VALUE = 1;
-// Highest allowed target in the current profile. Match the thermostat's
-// configured limit; the MCU's advanced maximum is not exposed by a verified DP.
-constexpr float HEAT_TARGET_MAX = 40.0f;
+// Absolute profile ceiling; runtime writes also respect reported DP19/DP26.
+constexpr float HEAT_TARGET_MAX = 90.0f;
+
+// ME81H cloud schema candidates; writes require a matching MCU report.
+constexpr uint8_t DP_FROST = 10;
+constexpr uint8_t DP_UPPER_LIMIT = 19;
+constexpr uint8_t DP_LOWER_LIMIT = 26;
+constexpr uint8_t DP_FACTORY_RESET = 39;
+constexpr uint8_t DP_FAULT = 45;
+constexpr uint8_t DP_DIFFERENTIAL = 101;

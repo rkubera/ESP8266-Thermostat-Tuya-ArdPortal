@@ -73,6 +73,7 @@ class String {
  private:std::string s_;
 };
 struct SerialMock {
+  void flush() {}
   std::deque<uint8_t> rx;
   std::vector<uint8_t> tx;
   size_t maxBuffered=0;

@@ -50,7 +50,7 @@ void handleBridgeCommand(const String& command, String value) {
     else if (value == "auto") requestThermostatMode(MODE_AUTO);
     else commandError("Expected off, heat or auto");
   } else if (command == "TEMPERATURE") {
-    if (!parseNumber(value,number) || number < 5 || number > HEAT_TARGET_MAX ||
+    if (!parseNumber(value,number) || number < targetLowerLimit() || number > targetUpperLimit() ||
         fabsf(number/TARGET_SCALE - roundf(number/TARGET_SCALE)) > 0.001f) {
       commandError("Invalid target temperature (profile limits/step required)"); return;
     }
@@ -73,6 +73,18 @@ void handleBridgeCommand(const String& command, String value) {
       commandError("Invalid MCU calibration (-10..10, whole degrees)"); return;
     }
     queueDp(DP_CALIBRATION,2,int32_t(number));
+  } else if (command == "FROST") {
+    if(value=="on" || value=="1") queueDp(DP_FROST,1,1);
+    else if(value=="off" || value=="0") queueDp(DP_FROST,1,0);
+    else commandError("Expected ON or OFF");
+  } else if(command=="DIFFERENTIAL" || command=="LOWER_LIMIT" || command=="UPPER_LIMIT") {
+    int minimum=command=="DIFFERENTIAL"?1:command=="LOWER_LIMIT"?5:30;
+    int maximum=command=="DIFFERENTIAL"?5:command=="LOWER_LIMIT"?20:90;
+    uint8_t id=command=="DIFFERENTIAL"?DP_DIFFERENTIAL:command=="LOWER_LIMIT"?DP_LOWER_LIMIT:DP_UPPER_LIMIT;
+    if(!parseNumber(value,number) || number!=roundf(number) || number<minimum || number>maximum) {
+      commandError("Invalid MCU setting range/step"); return;
+    }
+    queueDp(id,2,int32_t(number));
   } else if (command == "POWER_CONSUMPTION") {
     if (!parseNumber(value,number) || number < 100 || number > 5000 || number != roundf(number)) {
       commandError("Invalid rated power (100..5000 W)"); return;

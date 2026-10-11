@@ -28,3 +28,5 @@ subprocess.run(['python3', str(root / 'tests/mqtt_command_test.py')], check=True
 subprocess.run(['python3', str(root / 'tests/restart_energy_test.py')], check=True)
 
 subprocess.run(['python3', str(root / 'tests/portal_registration_test.py')], check=True)
+
+subprocess.run(['python3', str(root / 'tests/factory_reset_test.py')], check=True)

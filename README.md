@@ -48,7 +48,8 @@ programmer. Use a suitable isolated 3.3 V supply for programming.**
 ## Features
 
 - **Settings:** Climate control with Off, Heat and Auto; sensor selection,
-  temperature calibration, panel lock, rated load power and estimated power/energy.
+  temperature calibration, panel lock, anti-frost protection, switching differential,
+  lower/upper setpoint limits, MCU fault status, rated load power and estimated power/energy.
 - **Schedule:** visible in Auto, with program-dependent fields for Mon–Fri /
   Weekend (5+2), Mon–Sat / Sunday (6+1), or Every day (7).
   Each point has a time picker and a **5–40°C slider with a 1°C step**.
@@ -70,6 +71,12 @@ programmer. Use a suitable isolated 3.3 V supply for programming.**
   stored at full precision and displayed with two decimal places. Saved hourly
   and before supported ArdPortal restarts; an unexpected power loss may lose the
   unsaved increment. This is an estimate, not a measured electrical value.
+- **Factory Reset:** the existing ArdPortal reset confirmation covers the ESP reset
+  and a best-effort MCU reset through `onBeforeFactoryReset`. The MCU reset is sent
+  once through DP39 only when the MCU is online, initialized, has reported that
+  Boolean datapoint and has no pending commands. Otherwise the console records
+  why it was skipped and the ESP reset continues. There is no separate MCU reset
+  button, and a transmitted command does not prove the MCU restored its defaults.
 - Without an MCU, controls remain available for local preview. Preview edits do
   not queue hardware commands for replay when the MCU reconnects.
 
@@ -92,7 +99,7 @@ MCU as stated below. Unchecked items have no dedicated remote implementation.
 
 - [x] **Device on/off** — Portal Climate and MQTT/HA, using MCU DP1.
 - [x] **Manual heating and automatic scheduling** — Heat/Auto modes, using DP2 and the active weekly program.
-- [x] **Target temperature** — Portal/MQTT/HA, whole degrees in the exposed 5–40°C range.
+- [x] **Target temperature** — Portal/MQTT/HA, whole degrees, respecting MCU lower/upper limits (absolute range 5–90°C; schedules remain 5–40°C).
 - [x] **Current temperature and heating indication** — MCU reports exposed through Climate; relay state also drives estimated power.
 - [x] **Internal, external or combined sensor selection** — exposed through DP43.
 - [x] **Temperature calibration** — exposed through DP27; scaling must be confirmed on other MCU variants.
@@ -102,12 +109,15 @@ MCU as stated below. Unchecked items have no dedicated remote implementation.
 - [x] **Local panel and autonomous regulation** — retained in the original MCU; the ESP does not run the heating control loop.
 - [ ] **Separate live readings for both sensors** — only the MCU-reported selected temperature is exposed.
 - [ ] **Floor over-temperature limit configuration** — no dedicated remote control; configure through the original panel where supported.
-- [ ] **Switching differential/hysteresis configuration** — no dedicated remote control; configure through the original panel where supported.
-- [ ] **Anti-frost configuration** — no dedicated remote control; configure through the original panel where supported.
-- [ ] **Upper/lower setpoint limit configuration** — no dedicated remote controls; configure through the original panel where supported.
-- [ ] **Decoded MCU sensor faults and alarm entities** — raw reported datapoints are available in diagnostics, but there are no dedicated alarm entities or decoded fault UI.
-- [ ] **Thermostat factory reset** — no remote MCU factory-reset command; ArdPortal reset concerns the ESP configuration.
+- [x] **Switching differential/hysteresis configuration** — DP101, 1–5°C in Settings and MQTT/HA.
+- [x] **Anti-frost configuration** — DP10 switch in Settings and MQTT/HA; protection is executed by the MCU, including while off.
+- [x] **Upper/lower setpoint limit configuration** — DP19 (30–90°C) and DP26 (5–20°C), Settings and MQTT/HA.
+- [x] **Generic MCU fault reporting** — DP45 shown as `OK` or a hexadecimal fault bitmap in the portal and HA.
+- [ ] **Decoded MCU sensor faults** — individual fault bits are not mapped to sensor names without confirmed MCU evidence.
+- [x] **Conditional thermostat factory reset** — the confirmed ArdPortal Factory Reset invokes `onBeforeFactoryReset` and sends DP39 once, only if the MCU has reported DP39 as Boolean and no commands are pending. Offline/unsupported/busy MCU is logged and does not block ESP reset; physical MCU execution remains unconfirmed.
 - [ ] **Tuya / Smart Life cloud and vendor-app integration** — replaced by the local ArdPortal/MQTT/Home Assistant interface.
+
+Advanced settings use the [reported ME81H cloud schema](https://github.com/rospogrigio/localtuya/issues/1688), with writes gated by the actual MCU datapoint type. Ranges and write behavior still need validation on your physical MCU. No unsupported writes are replayed from offline preview.
 
 Advanced settings vary between ME81H/ME81AH variants; see the
 [original thermostat manual](https://cdn.manomano.com/files/pdf/28419507.pdf)
@@ -146,7 +156,9 @@ ArdPortal provides **ArdJSON** and **ArdFS**; they do not need separate installs
 This sketch does not use ArduinoJson, LittleFS, WiFiManager or PubSubClient.
 
 Use ArdPortal with the asynchronous AppConfig registration and configuration APIs
-used in this sketch. Older versions are not compatible. Tests exercise the
+used in this sketch, including `onBeforeFactoryReset`. Use a revision that
+includes this callback; the version number alone may not distinguish recent
+0.7.7 API changes. Older revisions are not compatible. Tests exercise the
 installed library's schema and MQTT command handling as well as the bridge.
 
 ## Build and upload
@@ -184,13 +196,19 @@ The current MCU profile uses these datapoints:
 | --- | --- |
 | 1 | Device power |
 | 2 | Automatic schedule / manual operation |
+| 10 | Anti-frost protection, Boolean |
 | 16 | Target temperature, whole °C |
+| 19 | Upper setpoint limit, 30–90°C |
 | 24 | Current temperature, 0.1°C |
+| 26 | Lower setpoint limit, 5–20°C |
 | 27 | Signed temperature calibration |
 | 36 | Relay report: enum 0 = heating, 1 = idle |
 | 38 | Eight time/temperature schedule points |
+| 39 | Conditional MCU factory reset, Boolean; not reported by every firmware |
 | 40 | Panel button lock |
 | 43 | Air / floor / combined sensor selection |
+| 45 | Fault bitmap: zero = OK; individual bit meanings unverified |
+| 101 | Switching differential, 1–5°C |
 | 102 | Weekly program: disabled / 5+2 / 6+1 / Daily |
 
 The Disabled program is not offered in the portal. Entering Auto enables 5+2 if
@@ -207,7 +225,7 @@ The test runner expects the installed Arduino libraries in a sibling `libraries`
 folder, as in a standard Arduino sketchbook. Tests cover UART parsing and command
 queues, mode transitions, schedule validation, energy estimation, timezone/DST
 boundaries, portal schemas, asynchronous registration, MQTT command handling and
-restart energy persistence. Hardware timing, OTA and MCU behavior require tests
+restart energy persistence, advanced setting validation and the factory-reset hook. Hardware timing, OTA and MCU behavior require tests
 on the physical thermostat.
 
 For old Home Assistant entities retained from an earlier firmware, use

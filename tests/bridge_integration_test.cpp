@@ -231,5 +231,23 @@ int main(){
   assert(portal.messages.back().indexOf("DP 40 type=1 value=1")>=0);
   report(24,2,235);
   assert(portal.messages.back().indexOf("Tuya RX DP 24")>=0);
+  // Advanced settings require a matching report; invalid values never reach UART.
+  Serial.tx.clear();command("FROST","ON");assert(!writeCount);
+  for(auto p:{dp(10,1,0),dp(101,2,1),dp(19,2,40),dp(26,2,10),dp(45,5,0)}) receive(7,p);
+  for(auto item:std::vector<std::pair<const char*,uint8_t>>{{"FROST",10},{"DIFFERENTIAL",101},{"LOWER_LIMIT",26},{"UPPER_LIMIT",19}}) {
+    const char* value=item.second==10?"ON":item.second==101?"2":item.second==26?"12":"50";
+    int expected=item.second==10?1:item.second==101?2:item.second==26?12:50;
+    Serial.tx.clear();command(item.first,value);tick();
+    assert(sentWrites()==std::vector<std::vector<uint8_t>>({dp(item.second,item.second==10?1:2,expected)}));
+    report(item.second,item.second==10?1:2,expected);assert(!writeCount);
+  }
+  command("DIFFERENTIAL","0");command("DIFFERENTIAL","1.5");command("LOWER_LIMIT","21");command("UPPER_LIMIT","91");
+  command("TEMPERATURE","11");command("TEMPERATURE","51");assert(!writeCount);
+  command("TEMPERATURE","45");tick();report(16,2,45);assert(!writeCount);
+  assert(!requestMcuFactoryReset()); // Our original MCU logs do not report DP39.
+  report(39,1,0);Serial.tx.clear();assert(requestMcuFactoryReset());
+  assert(sentWrites()==std::vector<std::vector<uint8_t>>({dp(39,1,1)}));
+  assert(!writeCount && initStage==0 && !hasDp(39,1));
+  tick(4000);assert(sentWrites().size()==1); // Reset cannot be retried.
   std::cout<<"Bridge integration tests passed: UART, off priority, timeout, MCU restart, schedule, clock and connection indicator\n";
 }
