@@ -1,0 +1,12 @@
+[
+  "homeassistant/climate/[DEVICE_NAME]_climate/config",
+  "homeassistant/sensor/[DEVICE_NAME]_floortemperature/config",
+  "homeassistant/sensor/[DEVICE_NAME]_airtemperature/config",
+  "homeassistant/sensor/[DEVICE_NAME]_humidity/config",
+  "homeassistant/number/[DEVICE_NAME]_airtemperature_offset/config",
+  "homeassistant/number/[DEVICE_NAME]_floortemperature_offset/config",
+  "homeassistant/select/[DEVICE_NAME]_tempselector/config",
+  "homeassistant/number/[DEVICE_NAME]_power_consumption/config",
+  "homeassistant/sensor/[DEVICE_NAME]_power_sensor/config",
+  "homeassistant/sensor/[DEVICE_NAME]_energy_total/config"
+]

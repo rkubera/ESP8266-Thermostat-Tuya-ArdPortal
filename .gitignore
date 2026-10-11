@@ -1,0 +1,23 @@
+# Local builds and generated firmware
+/build/
+*.bin
+*.bin.gz
+*.elf
+*.map
+*.o
+*.d
+*.hex
+
+# Local credentials and certificates
+.env
+.env.*
+*.pem
+*.key
+*.p12
+
+# Editor and operating-system files
+.DS_Store
+.vscode/
+.idea/
+__pycache__/
+*.py[cod]
