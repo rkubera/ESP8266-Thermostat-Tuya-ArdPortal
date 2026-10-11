@@ -22,7 +22,13 @@ Other PCB/MCU revisions may use different connections or datapoints.
 | GPIO1 / TX0 → MCU RX | Tuya UART transmit |
 | GPIO3 / RX0 ← MCU TX | Tuya UART receive |
 | 3.3 V and GND | Supply and common ground |
+| RST ← original module reset connection | Connect the thermostat's Wi-Fi module reset signal to ESP-12F RST |
 | GPIO14, optional | Active-low network status signal; verify PCB continuity |
+
+The **RST connection is required as well as power and UART**. Connect the ESP-12F
+RST pin to the reset signal used by the original WBR3 module, so the thermostat
+can reset the replacement Wi-Fi module. ESP-12F RST is active-low; use the
+original module reset connection, not a general-purpose ESP GPIO.
 
 UART uses **9600 baud, 8 data bits, no parity, 1 stop bit**. UART0 is reserved
 for the MCU; logs are available in the web console instead of Serial Monitor.
