@@ -87,22 +87,27 @@ local buttons/display and the stored schedule remain the MCU's responsibility.
 Behavior of those functions still depends on the original MCU firmware and its
 settings, not on a reimplementation in this sketch.
 
-| Original function | Coverage in this project |
-| --- | --- |
-| Device on/off | Portal Climate and MQTT/HA, using MCU DP1 |
-| Manual heating and automatic scheduling | Heat/Auto modes, using DP2 and the active weekly program |
-| Target temperature | Portal/MQTT/HA, whole degrees in the exposed 5–40°C range |
-| Current temperature and heating indication | MCU reports exposed through Climate; relay state also drives estimated power |
-| Internal, external or combined sensor selection | Exposed through DP43; separate live readings for both sensors are not provided |
-| Temperature calibration | Exposed through DP27; scaling must be confirmed on other MCU variants |
-| Panel button lock | Exposed through DP40 |
-| 5+2, 6+1 and daily weekly programs | Program selector, dependent schedule fields and automatic DP38 saving |
-| Local date/time | NTP plus configurable timezone rules; local time transmitted to MCU |
-| Local panel and autonomous regulation | Retained in the original MCU; the ESP does not run the heating control loop |
-| Floor over-temperature limit, switching differential/hysteresis, anti-frost setting, upper/lower setpoint limits | No dedicated remote controls; configure through the original panel where supported |
-| MCU sensor faults and alarms | Raw reported datapoints are available in diagnostics; no dedicated alarm entities or decoded fault UI |
-| Thermostat factory reset | No remote MCU factory-reset command; ArdPortal reset concerns the ESP configuration |
-| Tuya / Smart Life cloud and vendor-app integration | Replaced by the local ArdPortal/MQTT/Home Assistant interface |
+Checked items are supported by the ESP interface or retained in the original
+MCU as stated below. Unchecked items have no dedicated remote implementation.
+
+- [x] **Device on/off** — Portal Climate and MQTT/HA, using MCU DP1.
+- [x] **Manual heating and automatic scheduling** — Heat/Auto modes, using DP2 and the active weekly program.
+- [x] **Target temperature** — Portal/MQTT/HA, whole degrees in the exposed 5–40°C range.
+- [x] **Current temperature and heating indication** — MCU reports exposed through Climate; relay state also drives estimated power.
+- [x] **Internal, external or combined sensor selection** — exposed through DP43.
+- [x] **Temperature calibration** — exposed through DP27; scaling must be confirmed on other MCU variants.
+- [x] **Panel button lock** — exposed through DP40.
+- [x] **5+2, 6+1 and daily weekly programs** — program selector, dependent schedule fields and automatic DP38 saving.
+- [x] **Local date/time** — NTP plus configurable timezone rules; local time transmitted to MCU.
+- [x] **Local panel and autonomous regulation** — retained in the original MCU; the ESP does not run the heating control loop.
+- [ ] **Separate live readings for both sensors** — only the MCU-reported selected temperature is exposed.
+- [ ] **Floor over-temperature limit configuration** — no dedicated remote control; configure through the original panel where supported.
+- [ ] **Switching differential/hysteresis configuration** — no dedicated remote control; configure through the original panel where supported.
+- [ ] **Anti-frost configuration** — no dedicated remote control; configure through the original panel where supported.
+- [ ] **Upper/lower setpoint limit configuration** — no dedicated remote controls; configure through the original panel where supported.
+- [ ] **Decoded MCU sensor faults and alarm entities** — raw reported datapoints are available in diagnostics, but there are no dedicated alarm entities or decoded fault UI.
+- [ ] **Thermostat factory reset** — no remote MCU factory-reset command; ArdPortal reset concerns the ESP configuration.
+- [ ] **Tuya / Smart Life cloud and vendor-app integration** — replaced by the local ArdPortal/MQTT/Home Assistant interface.
 
 Advanced settings vary between ME81H/ME81AH variants; see the
 [original thermostat manual](https://cdn.manomano.com/files/pdf/28419507.pdf)
