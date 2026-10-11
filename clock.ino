@@ -39,13 +39,16 @@ void applyLocalClock(const String& field,const String& text) {
     commandError("Invalid or nonexistent local date/time");return;
   }
   timeval current={utc,0};settimeofday(&current,nullptr);
+  clockStateDirty=true;
   mcuTimePending=true;
 }
 void updateClockState() {
   if(!portalValuesReady) return;
-  static time_t rendered=0;time_t now=time(nullptr);
-  if(now<=1609459200 || (now==rendered && !clockStateDirty))return;
-  clockStateDirty=false;rendered=now;tm local; if(!configuredLocalTime(now,local))return;
+  static time_t renderedMinute=0;time_t now=time(nullptr);
+  // Updating app state also queues MQTT: publish the clock once per minute.
+  if(now<=1609459200 || (now/60==renderedMinute && !clockStateDirty))return;
+  tm local; if(!configuredLocalTime(now,local))return;
+  clockStateDirty=false;renderedMinute=now/60;
   TimeChangeRule* active=nullptr;controllerTimezone.toLocal(now,&active);
   char date[16],clock[12];strftime(date,sizeof(date),"%Y-%m-%d",&local);strftime(clock,sizeof(clock),"%H:%M:%S",&local);
   const char* days[]={"Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"};

@@ -59,6 +59,8 @@ programmer. Use a suitable isolated 3.3 V supply for programming.**
 - **Clock:** local date/time and two configurable timezone rules: week, weekday,
   month, transition hour and UTC offset. Default is **UTC with no daylight saving**.
   Offsets support 15-minute increments. Equal offsets disable seasonal changes.
+  Clock state is refreshed once per minute to limit MQTT traffic; manual clock
+  or timezone changes trigger an immediate refresh.
 - NTP supplies UTC. The **Timezone** library converts it to local time for the
   portal and Tuya MCU. Changing the rules requests another MCU time update.
 - **MQTT and Home Assistant:** ArdPortal manages discovery, availability, commands
