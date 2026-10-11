@@ -23,9 +23,12 @@ Other PCB/MCU revisions may use different connections or datapoints.
 | GPIO3 / RX0 ← MCU TX | Tuya UART receive |
 | 3.3 V and GND | Supply and common ground |
 | RST ← original module reset connection | Connect the thermostat's Wi-Fi module reset signal to ESP-12F RST |
+| EN | Also soldered/connected in the modified module installation; must be high for the ESP to run |
+| GPIO0 / IO0 | Also soldered/connected; high for normal boot, low during reset to enter the UART bootloader |
 | GPIO14, optional | Active-low network status signal; verify PCB continuity |
 
-The **RST connection is required as well as power and UART**. Connect the ESP-12F
+The modified installation also has **RST, EN and GPIO0 (IO0) soldered/connected**,
+in addition to power and UART. The **RST connection is required**. Connect the ESP-12F
 RST pin to the reset signal used by the original WBR3 module, so the thermostat
 can reset the replacement Wi-Fi module. ESP-12F RST is active-low; use the
 original module reset connection, not a general-purpose ESP GPIO.
